@@ -1,0 +1,1 @@
+Wire.h can be found in esp32 libraries (download and extract hardware folder into Arduino workspace)
