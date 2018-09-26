@@ -20,13 +20,14 @@ int16_t ax, ay, az;
 //int16_t gx, gy, gz;
 
 //aceleraciones calculadas
-float ax_m_s2 , ay_m_s2;
+//float ax_m_s2 , ay_m_s2;
 //float az_m_s2, gx_deg_s, gy_deg_, gz_deg_s;
-float resultantBaseAcceleration, resultantAcceleration, shortMargin, largeMargin;
+uint16_t resultantBaseAcceleration, resultantAcceleration, shortMargin, largeMargin;
 
 //timestamps y flags
 unsigned long initialTimestamp, finalTimestamp, duration;
 bool movementStarted;
+int trainingType;
 
 void setup() {
   Serial.begin(57600);    //Iniciando puerto serial  
@@ -37,18 +38,26 @@ void setup() {
 
   if (sensor.testConnection()) Serial.println("Sensor iniciado correctamente");
   else Serial.println("Error al iniciar el sensor");
-
-  //Lee las aceleraciones iniciales. 
-  //Quizas esto haya que llevarlo al momento en que el celular se conecta!
-  sensor.getAcceleration(&ax, &ay, &az);
-  ax_m_s2 = ax * (9.81/16384.0);
-  ay_m_s2 = ay * (9.81/16384.0);  
-  resultantBaseAcceleration = getResultantAcceleration(ax_m_s2, ay_m_s2);
-    
+  
   //Umbrales y flags
   movementStarted = false;
-  shortMargin = 5.0;
-  largeMargin = 8.5;
+  shortMargin = 5.0 / (9.81/16384.0);
+  largeMargin = 8.5 / (9.81/16384.0);
+
+  //Lee las aceleraciones iniciales.
+  while(true){if(SerialBT.hasClient()){break;}};
+	trainingType = SerialBT.read();
+  Serial.print("SETUP Recibido:\t");
+  
+	if(trainingType == 1){
+		Serial.println("Fuerza");
+	}
+  else {
+    Serial.println("Velocidad");
+  }
+  
+  sensor.getAcceleration(&ax, &ay, &az);
+  resultantBaseAcceleration = getResultantAcceleration(ax, ay);
   
 }
 
@@ -56,10 +65,8 @@ void loop() {
   
   // Leer las aceleraciones
   sensor.getAcceleration(&ax, &ay, &az);
-  ax_m_s2 = ax * (9.81/16384.0);
-  ay_m_s2 = ay * (9.81/16384.0);
   
-  resultantAcceleration = getResultantAcceleration(ax_m_s2, ay_m_s2);
+  resultantAcceleration = getResultantAcceleration(ax, ay);
   
   if(movementStarted){
     
@@ -72,16 +79,43 @@ void loop() {
        
        //enviarlo
        
-        Serial.print("Movimiento detectado. Duración (ms):\t");
-        Serial.println(duration);
+        Serial.print("Movimiento finalizado. ");
         
-        char dataBuffer [sizeof(unsigned long)*8+1];
-        sprintf(dataBuffer, "%lu", duration); 
-        
-        int count = countDigits(duration);
+          if(trainingType == 1){
+            //Fuerza
+            Serial.print("Fuerza de impacto (raw):\t");
+            Serial.println(resultantAcceleration);
 
-        SerialBT.write((uint8_t*)dataBuffer,sizeof(char)*count);
-        SerialBT.write((uint8_t*)";",sizeof(char));
+            uint16_t mask   = B11111111;          // 0000 0000 1111 1111
+            uint8_t first_half   = resultantAcceleration >> 8;
+            uint8_t sencond_half = resultantAcceleration & mask;
+            char dataBuffer [sizeof(uint8_t)*8+1];
+            
+            sprintf(dataBuffer, "%u", first_half);            
+            int count = countDigits8(duration);   
+            SerialBT.write((uint8_t*)dataBuffer,sizeof(char)*count);
+
+            sprintf(dataBuffer, "%u", sencond_half);            
+            count = countDigits8(duration);   
+            SerialBT.write((uint8_t*)dataBuffer,sizeof(char)*count);
+            
+            SerialBT.write((uint8_t*)";",sizeof(char));
+            
+          }
+          else{
+            //Velocidad
+            Serial.print("Duración (ms):\t");
+            Serial.println(duration);
+          
+          
+            char dataBuffer [sizeof(unsigned long)*8+1];
+            sprintf(dataBuffer, "%lu", duration); 
+            
+            int count = countDigits(duration);
+    
+            SerialBT.write((uint8_t*)dataBuffer,sizeof(char)*count);
+            SerialBT.write((uint8_t*)";",sizeof(char));
+        }
        
         movementStarted = false;
      }
@@ -101,29 +135,34 @@ void loop() {
   delay(10);
 }
 
-float getResultantAcceleration(float x, float y){
+uint16_t getResultantAcceleration(int16_t x, int16_t y){
   return sqrt(x*x + y*y);
 }
 
-float distanceToBase(float resultantAccel){
-  float distance = resultantAccel - resultantBaseAcceleration;
+uint16_t distanceToBase(uint16_t resultantAccel){
+  uint16_t distance = resultantAccel - resultantBaseAcceleration;
   if (distance  < 0)
     return 0 - distance;
   else
     return distance;
 }
 
-int countDigits(unsigned long d){
-  
-      int count = 0;
-      
-      unsigned long n = d;
-      
+int countDigits(unsigned long d){  
+      int count = 0;      
+      unsigned long n = d;      
       while(n != 0) { 
          n /= 10; 
          ++count; 
       }
+      return count;      
+}
 
-      return count;
-      
+int countDigits8(uint8_t d){  
+      int count = 0;      
+      uint8_t n = d;      
+      while(n != 0) { 
+         n /= 10; 
+         ++count; 
+      }
+      return count;      
 }
