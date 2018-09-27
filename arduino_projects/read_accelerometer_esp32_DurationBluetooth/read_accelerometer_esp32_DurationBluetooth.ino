@@ -58,7 +58,7 @@ void loop() {
           connectedToApp = true;
           Serial.print("SETUP Recibido:\t");
           Serial.print(trainingType);
-          if(trainingType == 1){
+          if(trainingType == 49){
             Serial.println(" (Fuerza)");
           }
           else {
@@ -92,8 +92,8 @@ void loop() {
        
         Serial.print("Movimiento finalizado. ");
         
-          if(trainingType == 1){
-            //Fuerza
+          if(trainingType == 49){
+            //Fuerza (caracter ASCII de 1)
             Serial.print("Fuerza de impacto (raw):\t");
             Serial.println(resultantAcceleration);
 
