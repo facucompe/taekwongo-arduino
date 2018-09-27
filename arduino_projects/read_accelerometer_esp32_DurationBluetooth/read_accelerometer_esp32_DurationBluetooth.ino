@@ -22,7 +22,7 @@ int16_t ax, ay, az;
 //aceleraciones calculadas
 //float ax_m_s2 , ay_m_s2;
 //float az_m_s2, gx_deg_s, gy_deg_, gz_deg_s;
-uint16_t resultantBaseAcceleration, resultantAcceleration, shortMargin, largeMargin;
+uint16_t resultantBaseAcceleration, resultantAcceleration, shortMargin, largeMargin, accelerationOverMargin;
 
 //timestamps y flags
 unsigned long initialTimestamp, finalTimestamp, duration, dataToSend;
@@ -88,14 +88,14 @@ void loop() {
 
     if (movementStarted) {
       if (distanceToBase(resultantAcceleration) <= shortMargin) {
-        Serial.print("Distant to base:\t");
+        Serial.print("Distance to base:\t");
         Serial.println(distanceToBase(resultantAcceleration));
         movementHasFinished();
       }
     }
     else {
       if (distanceToBase(resultantAcceleration) >= largeMargin) {
-        Serial.print("Distant to base:\t");
+        Serial.print("Distance to base:\t");
         Serial.println(distanceToBase(resultantAcceleration));
         movementHasStarted();
       }
@@ -114,6 +114,7 @@ void movementHasStarted() {
   Serial.println("Golpe iniciado");
 
   initialTimestamp = millis();
+  accelerationOverMargin = resultantAcceleration;
   movementStarted = true;
 }
 
@@ -126,12 +127,12 @@ void movementHasFinished() {
   duration = finalTimestamp - initialTimestamp;
 
   //enviarlo
-
   Serial.print("Movimiento finalizado. ");
+  
   if (trainingType == 49) {
     //Fuerza (caracter ASCII de 1)
     Serial.print("Fuerza de impacto (raw):\t");
-    dataToSend = (unsigned long) resultantAcceleration;
+    dataToSend = (unsigned long) accelerationOverMargin;
   }
   else {
     //Velocidad
