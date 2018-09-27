@@ -59,6 +59,7 @@ void loop() {
           Serial.print("SETUP Recibido:\t");
           Serial.print(trainingType);
           if(trainingType == 49){
+            //(caracter ASCII de 1)
             Serial.println(" (Fuerza)");
           }
           else {
@@ -97,19 +98,14 @@ void loop() {
             Serial.print("Fuerza de impacto (raw):\t");
             Serial.println(resultantAcceleration);
 
-            uint16_t mask   = B11111111;          // 0000 0000 1111 1111
-            uint8_t first_half   = resultantAcceleration >> 8;
-            uint8_t sencond_half = resultantAcceleration & mask;
-            char dataBuffer [sizeof(uint8_t)*8+1];
+            unsigned long force = (unsigned long) resultantAcceleration;
             
-            sprintf(dataBuffer, "%u", first_half);            
-            int count = countDigits8(duration);   
-            SerialBT.write((uint8_t*)dataBuffer,sizeof(char)*count);
-
-            sprintf(dataBuffer, "%u", sencond_half);            
-            count = countDigits8(duration);   
-            SerialBT.write((uint8_t*)dataBuffer,sizeof(char)*count);
+            char dataBuffer [sizeof(unsigned long)*8+1];
+            sprintf(dataBuffer, "%lu", force); 
             
+            int count = countDigits(force);
+    
+            SerialBT.write((uint8_t*)dataBuffer,sizeof(char)*count);
             SerialBT.write((uint8_t*)";",sizeof(char));
             
           }
@@ -117,7 +113,6 @@ void loop() {
             //Velocidad
             Serial.print("Duración (ms):\t");
             Serial.println(duration);
-          
           
             char dataBuffer [sizeof(unsigned long)*8+1];
             sprintf(dataBuffer, "%lu", duration); 
@@ -170,16 +165,6 @@ uint16_t distanceToBase(uint16_t resultantAccel){
 int countDigits(unsigned long d){  
       int count = 0;      
       unsigned long n = d;      
-      while(n != 0) { 
-         n /= 10; 
-         ++count; 
-      }
-      return count;      
-}
-
-int countDigits8(uint8_t d){  
-      int count = 0;      
-      uint8_t n = d;      
       while(n != 0) { 
          n /= 10; 
          ++count; 
