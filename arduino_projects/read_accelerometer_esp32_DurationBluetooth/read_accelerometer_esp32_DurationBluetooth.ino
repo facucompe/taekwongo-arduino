@@ -25,7 +25,7 @@ int16_t ax, ay, az;
 uint16_t resultantBaseAcceleration, resultantAcceleration, shortMargin, largeMargin;
 
 //timestamps y flags
-unsigned long initialTimestamp, finalTimestamp, duration;
+unsigned long initialTimestamp, finalTimestamp, duration, dataToSend;
 bool movementStarted, connectedToApp;
 int trainingType;
 
@@ -92,36 +92,24 @@ void loop() {
        //enviarlo
        
         Serial.print("Movimiento finalizado. ");
-        
           if(trainingType == 49){
             //Fuerza (caracter ASCII de 1)
             Serial.print("Fuerza de impacto (raw):\t");
-            Serial.println(resultantAcceleration);
-
-            unsigned long force = (unsigned long) resultantAcceleration;
-            
-            char dataBuffer [sizeof(unsigned long)*8+1];
-            sprintf(dataBuffer, "%lu", force); 
-            
-            int count = countDigits(force);
-    
-            SerialBT.write((uint8_t*)dataBuffer,sizeof(char)*count);
-            SerialBT.write((uint8_t*)";",sizeof(char));
-            
+			dataToSend = (unsigned long) resultantAcceleration;
+		  }
           }
           else{
             //Velocidad
             Serial.print("Duración (ms):\t");
-            Serial.println(duration);
-          
-            char dataBuffer [sizeof(unsigned long)*8+1];
-            sprintf(dataBuffer, "%lu", duration); 
-            
-            int count = countDigits(duration);
+			dataToSend = duration;
+        }	
+		
+		char dataBuffer [sizeof(unsigned long)*8+1];
+        sprintf(dataBuffer, "%lu", dataToSend);  
+		int count = countDigits(dataToSend);
     
-            SerialBT.write((uint8_t*)dataBuffer,sizeof(char)*count);
-            SerialBT.write((uint8_t*)";",sizeof(char));
-        }
+        SerialBT.write((uint8_t*)dataBuffer,sizeof(char)*count);
+        SerialBT.write((uint8_t*)";",sizeof(char));
        
         movementStarted = false;
      }
