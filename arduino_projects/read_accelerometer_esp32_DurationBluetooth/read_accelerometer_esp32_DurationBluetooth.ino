@@ -26,7 +26,7 @@ uint16_t resultantBaseAcceleration, resultantAcceleration, shortMargin, largeMar
 
 //timestamps y flags
 unsigned long initialTimestamp, finalTimestamp, duration;
-bool movementStarted;
+bool movementStarted, connectedToApp;
 int trainingType;
 
 void setup() {
@@ -43,25 +43,36 @@ void setup() {
   movementStarted = false;
   shortMargin = 5.0 / (9.81/16384.0);
   largeMargin = 8.5 / (9.81/16384.0);
-
-  //Lee las aceleraciones iniciales.
-  while(true){if(SerialBT.hasClient()){break;}};
-	trainingType = SerialBT.read();
-  Serial.print("SETUP Recibido:\t");
-  
-	if(trainingType == 1){
-		Serial.println("Fuerza");
-	}
-  else {
-    Serial.println("Velocidad");
-  }
-  
-  sensor.getAcceleration(&ax, &ay, &az);
-  resultantBaseAcceleration = getResultantAcceleration(ax, ay);
   
 }
 
 void loop() {
+
+  if(SerialBT.hasClient()){
+    
+    while(!connectedToApp){
+      
+      trainingType = SerialBT.read();
+  
+        if(trainingType != 0){
+          connectedToApp = true;
+          Serial.print("SETUP Recibido:\t");
+          Serial.print(trainingType);
+          if(trainingType == 1){
+            Serial.println(" (Fuerza)");
+          }
+          else {
+            Serial.println(" (Velocidad)");
+          }
+    
+          //Lee las aceleraciones iniciales.
+          sensor.getAcceleration(&ax, &ay, &az);
+          resultantBaseAcceleration = getResultantAcceleration(ax, ay);
+
+          break;
+      }
+  
+    }
   
   // Leer las aceleraciones
   sensor.getAcceleration(&ax, &ay, &az);
@@ -133,6 +144,15 @@ void loop() {
   } 
 
   delay(10);
+
+  }
+  else
+  {
+
+    connectedToApp = false;
+    delay(1000);
+    
+  }
 }
 
 uint16_t getResultantAcceleration(int16_t x, int16_t y){
