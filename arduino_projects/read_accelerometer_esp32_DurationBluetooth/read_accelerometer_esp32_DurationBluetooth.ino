@@ -43,6 +43,10 @@ void setup() {
   movementStarted = false;
   shortMargin = 3.0 / (9.81 / 16384.0);
   largeMargin = 10.0 / (9.81 / 16384.0);
+  Serial.print("Margen menor:\t");
+  Serial.println(shortMargin);
+  Serial.print("Margen mayor:\t");
+  Serial.println(largeMargin);
 
 }
 
@@ -61,6 +65,8 @@ void initializeConnectionWithApp() {
   //Lee las aceleraciones iniciales.
   sensor.getAcceleration(&ax, &ay, &az);
   resultantBaseAcceleration = getResultantAcceleration(ax, ay, az);
+  Serial.print("Aceleración base:\t");
+  Serial.println(resultantBaseAcceleration);
 }
 
 void loop() {
@@ -76,14 +82,21 @@ void loop() {
     // Leer las aceleraciones
     sensor.getAcceleration(&ax, &ay, &az);
     resultantAcceleration = getResultantAcceleration(ax, ay, az);
+    Serial.print("Aceleración resultante:\t");
+    Serial.println(resultantAcceleration);
+
 
     if (movementStarted) {
       if (distanceToBase(resultantAcceleration) <= shortMargin) {
+        Serial.print("Distant to base:\t");
+        Serial.println(distanceToBase(resultantAcceleration));
         movementHasFinished();
       }
     }
     else {
       if (distanceToBase(resultantAcceleration) >= largeMargin) {
+        Serial.print("Distant to base:\t");
+        Serial.println(distanceToBase(resultantAcceleration));
         movementHasStarted();
       }
     }
@@ -126,6 +139,7 @@ void movementHasFinished() {
     dataToSend = duration;
   }
 
+  Serial.println(dataToSend);
   char dataBuffer [sizeof(unsigned long) * 8 + 1];
   sprintf(dataBuffer, "%lu", dataToSend);
   int count = countDigits(dataToSend);
@@ -141,7 +155,7 @@ uint16_t getResultantAcceleration(int16_t x, int16_t y, int16_t z) {
 }
 
 uint16_t distanceToBase(uint16_t resultantAccel) {
-  uint16_t distance = resultantAccel - resultantBaseAcceleration;
+  int16_t distance = resultantAccel - resultantBaseAcceleration;
   if (distance  < 0)
     return 0 - distance;
   else
