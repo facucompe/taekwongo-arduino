@@ -11,7 +11,7 @@
 
 BluetoothSerial SerialBT;
 
-// La dirección del MPU6050 puede ser 0x68 o 0x69, dependiendo 
+// La dirección del MPU6050 puede ser 0x68 o 0x69, dependiendo
 // del estado de AD0. Si no se especifica, 0x68 estará implicito
 MPU6050 sensor;
 
@@ -30,119 +30,117 @@ bool movementStarted, connectedToApp;
 int trainingType;
 
 void setup() {
-  Serial.begin(57600);    //Iniciando puerto serial  
+  Serial.begin(57600);    //Iniciando puerto serial
   SerialBT.begin("TaekwonGo Band"); //Bluetooth device name
-  
-  Wire.begin();           //Iniciando I2C  
+
+  Wire.begin();           //Iniciando I2C
   sensor.initialize();    //Iniciando el sensor acelerometro
 
   if (sensor.testConnection()) Serial.println("Sensor iniciado correctamente");
   else Serial.println("Error al iniciar el sensor");
-  
+
   //Umbrales y flags
   movementStarted = false;
-  shortMargin = 5.0 / (9.81/16384.0);
-  largeMargin = 8.5 / (9.81/16384.0);
-  
+  shortMargin = 5.0 / (9.81 / 16384.0);
+  largeMargin = 8.5 / (9.81 / 16384.0);
+
+}
+
+void initializeConnectionWithApp() {
+  connectedToApp = true;
+  Serial.print("SETUP Recibido:\t");
+  Serial.print(trainingType);
+  if (trainingType == 49) {
+    //(caracter ASCII de 1)
+    Serial.println(" (Fuerza)");
+  }
+  else {
+    Serial.println(" (Velocidad)");
+  }
+
+  //Lee las aceleraciones iniciales.
+  sensor.getAcceleration(&ax, &ay, &az);
+  resultantBaseAcceleration = getResultantAcceleration(ax, ay);
 }
 
 void loop() {
 
-  if(SerialBT.hasClient()){
-    
-    while(!connectedToApp){
-      
+  if (SerialBT.hasClient()) {
+    while (!connectedToApp) {
       trainingType = SerialBT.read();
-  
-        if(trainingType != 0){
-          connectedToApp = true;
-          Serial.print("SETUP Recibido:\t");
-          Serial.print(trainingType);
-          if(trainingType == 49){
-            //(caracter ASCII de 1)
-            Serial.println(" (Fuerza)");
-          }
-          else {
-            Serial.println(" (Velocidad)");
-          }
-    
-          //Lee las aceleraciones iniciales.
-          sensor.getAcceleration(&ax, &ay, &az);
-          resultantBaseAcceleration = getResultantAcceleration(ax, ay);
-
-          break;
+      if (trainingType != 0) {
+        initializeConnectionWithApp();
+        break;
       }
-  
     }
-  
-  // Leer las aceleraciones
-  sensor.getAcceleration(&ax, &ay, &az);
-  
-  resultantAcceleration = getResultantAcceleration(ax, ay);
-  
-  if(movementStarted){
-    
-     if(distanceToBase(resultantAcceleration) <= shortMargin){
-       //se completó el golpe
-       Serial.println("Golpe completado");
-       
-       finalTimestamp = millis();
-       duration = finalTimestamp - initialTimestamp;
-       
-       //enviarlo
-       
-        Serial.print("Movimiento finalizado. ");
-          if(trainingType == 49){
-            //Fuerza (caracter ASCII de 1)
-            Serial.print("Fuerza de impacto (raw):\t");
-			dataToSend = (unsigned long) resultantAcceleration;
-		  }
-          }
-          else{
-            //Velocidad
-            Serial.print("Duración (ms):\t");
-			dataToSend = duration;
-        }	
-		
-		char dataBuffer [sizeof(unsigned long)*8+1];
-        sprintf(dataBuffer, "%lu", dataToSend);  
-		int count = countDigits(dataToSend);
-    
-        SerialBT.write((uint8_t*)dataBuffer,sizeof(char)*count);
-        SerialBT.write((uint8_t*)";",sizeof(char));
-       
-        movementStarted = false;
-     }
-    
-  }
-  else{
-        if(distanceToBase(resultantAcceleration) >= largeMargin){
-          //empezó el golpe
-          Serial.println("Golpe iniciado");
-          
-          initialTimestamp = millis();
-          movementStarted = true;
-          
-        }
-  } 
+    // Leer las aceleraciones
+    sensor.getAcceleration(&ax, &ay, &az);
+    resultantAcceleration = getResultantAcceleration(ax, ay);
 
-  delay(10);
-
+    if (movementStarted) {
+      if (distanceToBase(resultantAcceleration) <= shortMargin) {
+        movementHasFinished();
+      }
+    }
+    else {
+      if (distanceToBase(resultantAcceleration) >= largeMargin) {
+        movementHasStarted();
+      }
+    }
+    delay(10);
   }
   else
   {
-
     connectedToApp = false;
     delay(1000);
-    
   }
 }
 
-uint16_t getResultantAcceleration(int16_t x, int16_t y){
-  return sqrt(x*x + y*y);
+void movementHasStarted() {
+  //empezó el golpe
+  Serial.println("Golpe iniciado");
+
+  initialTimestamp = millis();
+  movementStarted = true;
 }
 
-uint16_t distanceToBase(uint16_t resultantAccel){
+void movementHasFinished() {
+
+  //se completó el golpe
+  Serial.println("Golpe completado");
+
+  finalTimestamp = millis();
+  duration = finalTimestamp - initialTimestamp;
+
+  //enviarlo
+
+  Serial.print("Movimiento finalizado. ");
+  if (trainingType == 49) {
+    //Fuerza (caracter ASCII de 1)
+    Serial.print("Fuerza de impacto (raw):\t");
+    dataToSend = (unsigned long) resultantAcceleration;
+  }
+  else {
+    //Velocidad
+    Serial.print("Duración (ms):\t");
+    dataToSend = duration;
+  }
+
+  char dataBuffer [sizeof(unsigned long) * 8 + 1];
+  sprintf(dataBuffer, "%lu", dataToSend);
+  int count = countDigits(dataToSend);
+
+  SerialBT.write((uint8_t*)dataBuffer, sizeof(char)*count);
+  SerialBT.write((uint8_t*)";", sizeof(char));
+
+  movementStarted = false;
+}
+
+uint16_t getResultantAcceleration(int16_t x, int16_t y) {
+  return sqrt(x * x + y * y);
+}
+
+uint16_t distanceToBase(uint16_t resultantAccel) {
   uint16_t distance = resultantAccel - resultantBaseAcceleration;
   if (distance  < 0)
     return 0 - distance;
@@ -150,12 +148,12 @@ uint16_t distanceToBase(uint16_t resultantAccel){
     return distance;
 }
 
-int countDigits(unsigned long d){  
-      int count = 0;      
-      unsigned long n = d;      
-      while(n != 0) { 
-         n /= 10; 
-         ++count; 
-      }
-      return count;      
+int countDigits(unsigned long d) {
+  int count = 0;
+  unsigned long n = d;
+  while (n != 0) {
+    n /= 10;
+    ++count;
+  }
+  return count;
 }
