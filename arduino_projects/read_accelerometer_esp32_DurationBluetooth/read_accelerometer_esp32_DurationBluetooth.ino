@@ -41,8 +41,8 @@ void setup() {
 
   //Umbrales y flags
   movementStarted = false;
-  shortMargin = 5.0 / (9.81 / 16384.0);
-  largeMargin = 8.5 / (9.81 / 16384.0);
+  shortMargin = 3.0 / (9.81 / 16384.0);
+  largeMargin = 10.0 / (9.81 / 16384.0);
 
 }
 
