@@ -60,7 +60,7 @@ void initializeConnectionWithApp() {
 
   //Lee las aceleraciones iniciales.
   sensor.getAcceleration(&ax, &ay, &az);
-  resultantBaseAcceleration = getResultantAcceleration(ax, ay);
+  resultantBaseAcceleration = getResultantAcceleration(ax, ay, az);
 }
 
 void loop() {
@@ -75,7 +75,7 @@ void loop() {
     }
     // Leer las aceleraciones
     sensor.getAcceleration(&ax, &ay, &az);
-    resultantAcceleration = getResultantAcceleration(ax, ay);
+    resultantAcceleration = getResultantAcceleration(ax, ay, az);
 
     if (movementStarted) {
       if (distanceToBase(resultantAcceleration) <= shortMargin) {
@@ -136,8 +136,8 @@ void movementHasFinished() {
   movementStarted = false;
 }
 
-uint16_t getResultantAcceleration(int16_t x, int16_t y) {
-  return sqrt(x * x + y * y);
+uint16_t getResultantAcceleration(int16_t x, int16_t y, int16_t z) {
+  return sqrt(x * x + y * y + z * z);
 }
 
 uint16_t distanceToBase(uint16_t resultantAccel) {
